@@ -27,7 +27,7 @@ build-job:       # This job runs in the build stage, which runs first.
    - tagging
   script:
     - echo "Compiling the code..."
-    - echo "$CI_REPOSITORY_URL - $CI_JOB_TOKEN"
+    - echo "$CI_REPOSITORY_URL - $PROJECT_ACCESS_TOKEN"
     - git status
     - git branch -l --all
     - git describe --tags --abbrev=0 2>/dev/null
