@@ -39,8 +39,8 @@ build-job:       # This job runs in the build stage, which runs first.
     - new_tag=$(( $curr_tag + 1 ))
 
     - echo "Removing existing tag:$curr_tag ..."
-    - git tag --delete "$curr_tag"
-    - git push origin --delete "$curr_tag"
+    - git tag --delete "$new_tag"
+    - git push origin --delete "$new_tag"
 
     - echo "Creating new tag:$new_tag on sha:$sha ..."
     - git tag "$new_tag" "$sha"
