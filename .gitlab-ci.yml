@@ -27,7 +27,7 @@ build-job:       # This job runs in the build stage, which runs first.
    - tagging
   script:
     - echo "Compiling the code..."
-    - echo "$CI_REPOSITORY_URL - $PROJECT_ACCESS_TOKEN"
+    - echo "$PAT_REPO_URL"
     - git status
     - git branch -l --all
     - git describe --tags --abbrev=0 2>/dev/null
@@ -39,7 +39,7 @@ build-job:       # This job runs in the build stage, which runs first.
     - curr_tag=$(git describe --tags --abbrev=0 2>/dev/null)
     - new_tag=$(( $curr_tag + 1 ))
 
-    - echo "Removing existing tag:$curr_tag ..."
+    - echo "Removing existing tag:$new_tag ..."
     #- git tag --delete "$new_tag" 
     #- git push origin --delete "$new_tag"
 
@@ -47,7 +47,7 @@ build-job:       # This job runs in the build stage, which runs first.
     - git config user.name "pipeline-user"
     - git config user.email "pipeline-user@$users.noreply.git.streamboard.tv"
     - git tag "$new_tag" "$sha"
-    - git push "$CI_REPOSITORY_URL" "$new_tag":origin
+    - git push "$PAT_REPO_URL" "$new_tag":origin
     - echo "Compile complete."
 
 unit-test-job:   # This job runs in the test stage.
