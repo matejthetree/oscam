@@ -29,6 +29,11 @@ build-job:       # This job runs in the build stage, which runs first.
     - echo "Compiling the code..."
     - git status
     - git describe --tags --abbrev=0 2>/dev/null
+    - git rev-parse HEAD
+    - ./config.sh --oscam-revision
+    - ./config.sh --oscam-commit
+    - revision=$(./config.sh --oscam-revision)
+    - echo (($revision + 1 ))
     - echo "Compile complete."
 
 unit-test-job:   # This job runs in the test stage.
