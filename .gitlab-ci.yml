@@ -38,11 +38,13 @@ build-job:       # This job runs in the build stage, which runs first.
     - curr_tag=$(git describe --tags --abbrev=0 2>/dev/null)
     - new_tag=$(( $curr_tag + 1 ))
 
-    - echo "$new_tag - $sha"
-    - echo "git tag --delete "$new_tag""
-    - echo "git push origin --delete "$new_tag""
-    - echo "git tag "$new_tag" "$sha""
-    - echo "git push origin "$new_tag""
+    - echo "Removing existing tag:$curr_tag ..."
+    - git tag --delete "$curr_tag"
+    - git push origin --delete "$curr_tag"
+
+    - echo "Creating new tag:$new_tag on sha:$sha ..."
+    - git tag "$new_tag" "$sha"
+    - git push origin "$new_tag"
     - echo "Compile complete."
 
 unit-test-job:   # This job runs in the test stage.
