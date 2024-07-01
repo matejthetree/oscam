@@ -7406,6 +7406,7 @@ bool select_csa_alt(ECM_REQUEST *er)
 void dvbapi_send_dcw(struct s_client *client, ECM_REQUEST *er)
 {
 	int32_t i, j, k, handled = 0;
+	uint8_t null_cw8[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	for(i = 0; i < MAX_DEMUX; i++)
 	{
 		uint32_t nocw_write = 0; // 0 = write cw, 1 = dont write cw to hardware demuxer
@@ -7843,6 +7844,22 @@ void dvbapi_send_dcw(struct s_client *client, ECM_REQUEST *er)
 				dvbapi_write_cw(i, j, 0, er->cw, 8, NULL, 0, CA_ALGO_DVBCSA, CA_MODE_CBC, er->msgid);
 #endif
 				break;
+			}
+		}
+
+#ifdef WITH_EXTENDED_CW
+		if(!(set_dvbapi_cw || er->cw_ex.algo == CA_ALGO_AES128))
+#else
+		if(!(set_dvbapi_cw))
+#endif
+		{
+			if(memcmp(er->cw, null_cw8, 8) != 0)
+			{
+				memcpy(demux[i].last_cw[0][0], er->cw, 8);
+			}
+			else
+			{
+				memcpy(demux[i].last_cw[0][1], er->cw + 8, 8);
 			}
 		}
 
