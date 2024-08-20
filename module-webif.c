@@ -9304,6 +9304,7 @@ static int32_t process_request(FILE * f, IN_ADDR_T in)
 				tpl_addVar(vars, TPLADD, "LOCALE_DECPOINT", strstr(tpl_getVar(vars, "TMP_DECPOINT"), ",") ? ",": ".");
 			}
 
+			tpl_addVar(vars, TPLADD, "HTTP_CHARSET", "UTF-8");
 			if(cfg.http_picon_size > 0)
 			{
 				tpl_printf(vars, TPLADD, "HTTPPICONSIZEINS", "img.statususericon, img.protoicon, img.usericon, img.readericon {height:%dpx !important;max-height:%dpx !important;}", cfg.http_picon_size, cfg.http_picon_size);
@@ -9322,7 +9323,7 @@ static int32_t process_request(FILE * f, IN_ADDR_T in)
 				tpl_addVar(vars, TPLADD, "REFRESH", tpl_getTpl(vars, "REFRESH"));
 			}
 #ifdef WEBIF_JQUERY
-			tpl_addVar(vars, TPLADD, "SRCJQUERY", "jquery.js");
+			tpl_printf(vars, TPLADD, "SRCJQUERY", "jquery.js?v=%s", CS_VERSION);
 #else
 			tpl_addVar(vars, TPLADD, "SRCJQUERY", cfg.http_extern_jquery);
 #endif
