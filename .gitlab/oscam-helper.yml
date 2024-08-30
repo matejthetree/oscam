@@ -86,7 +86,7 @@
         JQ_BIN="$(which jq || printf $HOME/bin/jq)"
       fi
 
-  #installs upx for pipeline user
+  #installs unzip for pipeline user
   unzip-installer:
     - |
       export LC_ALL=C
@@ -105,13 +105,12 @@
         UNZIP_BIN="$(which unzip || printf $HOME/bin/unzip)"
       fi
 
-  #installs SonarScanner CLI for pipeline user
+  #installs SonarScanner + build wrapper CLI for pipeline user
   sonar-installer:
     - !reference [.helper, jq-installer]
     - !reference [.helper, unzip-installer]
     - |
       export LC_ALL=C
-      rm -rf "/tmp/sonar-scanner-cli.zip" "/tmp/sonar-build-wrapper.zip" "$HOME/sonar" 2>/dev/null;
       if ! SONAR_BIN="$(which sonar-scanner)" && [ ! -f $HOME/sonar/bin/sonar-scanner ]; then
         echo "Downloading SonarScanner CLI to '$HOME/sonar'...";
         case $(uname -m) in
@@ -127,7 +126,6 @@
         BUILDWRAPPER_URL="$SONAR_HOST_URL/static/cpp/build-wrapper-linux-x86.zip";
         curl --progress-bar -L --output "/tmp/sonar-build-wrapper.zip" "$BUILDWRAPPER_URL";
         $UNZIP_BIN -d "$HOME/sonar/bin" "/tmp/sonar-build-wrapper.zip" && mv "$HOME/sonar/bin/build-wrapper-linux-x86"/* "$HOME/sonar/bin" && rmdir "$HOME/sonar/bin/build-wrapper-linux-x86";
-        ls -la "$HOME/sonar/bin"
       else
         SONAR_BIN="$(which sonar-scanner || printf $HOME/sonar/bin/sonar-scanner)"
       fi
@@ -419,6 +417,6 @@
       export LC_ALL=C
       PATH="$HOME/bin:$HOME/sonar/bin:$PATH"
       echo "Running SonarQube static code analysis..."
+      export EXTRA_CC_OPTS="-fprofile-abs-path --coverage -O0"
       build-wrapper-linux-x86-64 --out-dir "${BUILD_WRAPPER_OUT_DIR}" make
-      sonar-scanner --define sonar.cfamily.compile-commands="${BUILD_WRAPPER_OUT_DIR}/compile_commands.json"
-      curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=${PROJECT_KEY}&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json
+      #sonar-scanner --define sonar.cfamily.compile-commands="${BUILD_WRAPPER_OUT_DIR}/compile_commands.json"

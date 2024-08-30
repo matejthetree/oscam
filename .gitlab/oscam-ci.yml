@@ -129,8 +129,3 @@ sonarcloud-check:
   script:
     - !reference [.helper, code-analysis]
   allow_failure: true
-  artifacts:
-    when: always
-    reports:
-      sast: gl-sast-sonar-report.json
-    expire_in: 1 week
