@@ -112,3 +112,25 @@ auto-version:
   script:
     - !reference [.helper, tag-version]
   allow_failure: false
+
+sonarcloud-check:
+  stage: fixup
+  tags:
+    - clean
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
+    BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory 
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $GITLAB_USER_NAME != 'pipeline-user'
+    - if: $CI_PIPELINE_SOURCE == 'schedule' && $GITLAB_USER_NAME != 'pipeline-user'
+    - when: manual
+  script:
+    - !reference [.helper, code-analysis]
+  allow_failure: true
+  artifacts:
+    when: always
+    reports:
+      sast: gl-sast-sonar-report.json
+    expire_in: 1 week

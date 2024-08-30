@@ -71,6 +71,7 @@
   #installs jq for pipeline user
   jq-installer:
     - |
+      export LC_ALL=C
       if ! JQ_BIN="$(which jq)" && [ ! -f $HOME/bin/jq ]; then
         echo "Downloading jq binary to '$HOME/bin/jq'...";
         case $(uname -m) in
@@ -86,10 +87,57 @@
       fi
 
   #installs upx for pipeline user
+  unzip-installer:
+    - |
+      export LC_ALL=C
+      if ! UNZIP_BIN="$(which unzip)" && [ ! -f $HOME/bin/unzip ]; then
+        echo "Downloading unzip binary to '$HOME/bin/unzip'...";
+        rm -f "/tmp/upx_$HOST_ARCH.tar.xz" 2>/dev/null;
+        UNZIP_URL="https://oss.oracle.com/el4/unzip/unzip.tar";
+        curl --progress-bar -L --output "/tmp/unzip.tar" "$UNZIP_URL";
+        CURDIR=$(echo $PWD);
+        cd $HOME/bin;
+        tar -xvf "/tmp/unzip.tar"
+        chmod +x $HOME/bin/unzip;
+        UNZIP_BIN="$HOME/bin/unzip";
+        cd $CURDIR;
+      else
+        UNZIP_BIN="$(which unzip || printf $HOME/bin/unzip)"
+      fi
+
+  #installs SonarScanner CLI for pipeline user
+  sonar-installer:
+    - !reference [.helper, jq-installer]
+    - !reference [.helper, unzip-installer]
+    - |
+      export LC_ALL=C
+      rm -rf "/tmp/sonar-scanner-cli.zip" "/tmp/sonar-build-wrapper.zip" "$HOME/sonar" 2>/dev/null;
+      if ! SONAR_BIN="$(which sonar-scanner)" && [ ! -f $HOME/sonar/bin/sonar-scanner ]; then
+        echo "Downloading SonarScanner CLI to '$HOME/sonar'...";
+        case $(uname -m) in
+          aarch64|arm64) HOST_ARCH="aarch64" ;;
+          *)             HOST_ARCH="x64" ;;
+        esac;
+        rm -rf "/tmp/sonar-scanner-cli.zip" "/tmp/sonar-build-wrapper.zip" "$HOME/sonar" 2>/dev/null;
+        SONAR_TAG="$(curl --silent "https://api.github.com/repos/SonarSource/sonar-scanner-cli/releases/latest" | $JQ_BIN -r '.tag_name')";
+        SONAR_URL="https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_TAG-linux-$HOST_ARCH.zip";
+        curl --progress-bar -L --output "/tmp/sonar-scanner-cli.zip" "$SONAR_URL";
+        $UNZIP_BIN -d "$HOME/sonar" "/tmp/sonar-scanner-cli.zip" && f=("$HOME/sonar"/*) && mv "$HOME/sonar"/*/* "$HOME/sonar" && rmdir "${f[@]}"
+        SONAR_BIN="$HOME/sonar/bin/sonar-scanner";
+        BUILDWRAPPER_URL="$SONAR_HOST_URL/static/cpp/build-wrapper-linux-x86.zip";
+        curl --progress-bar -L --output "/tmp/sonar-build-wrapper.zip" "$BUILDWRAPPER_URL";
+        $UNZIP_BIN -d "$HOME/sonar/bin" "/tmp/sonar-build-wrapper.zip" && mv "$HOME/sonar/bin/build-wrapper-linux-x86"/* "$HOME/sonar/bin" && rmdir "$HOME/sonar/bin/build-wrapper-linux-x86";
+        ls -la "$HOME/sonar/bin"
+      else
+        SONAR_BIN="$(which sonar-scanner || printf $HOME/sonar/bin/sonar-scanner)"
+      fi
+
+  #installs upx for pipeline user
   upx-installer:
     - !reference [.helper, jq-installer]
 
     - |
+      export LC_ALL=C
       if ! UPX_BIN="$(which upx)" && [ ! -f $HOME/bin/upx ]; then
         echo "Downloading upx binary to '$HOME/bin/upx'...";
         case $(uname -m) in
@@ -98,7 +146,7 @@
           arm*)          HOST_ARCH="arm" ;;
           *)             HOST_ARCH="amd64" ;;
         esac;
-        rm -rf "/tmp/upx_$HOST_ARCH.tar.xz" 2>/dev/null;
+        rm -f "/tmp/upx_$HOST_ARCH.tar.xz" 2>/dev/null;
         UPX_TAG="$(git ls-remote --sort=-version:refname https://github.com/upx/upx.git --tags v*.*.* | grep -v 'alpha\|beta\|\-pre\|\-rc\|\^' | awk -F'/' 'NR==1 {print $NF}')";
         UPX_URL="$(curl --silent "https://api.github.com/repos/upx/upx/releases/tags/$UPX_TAG" | $JQ_BIN -r '.assets | .[] | select( (.name | contains("'$HOST_ARCH'")) and (.name | endswith(".tar.xz"))) | .browser_download_url' | sed -e 's#\"##g')";
         curl --progress-bar -L --output "/tmp/upx_$HOST_ARCH.tar.xz" "$UPX_URL";
@@ -363,3 +411,14 @@
       echo "Pushing changes (forced) to repository..."
       git push --force --follow-tags "${API_PROTOCOL}://pipeline-user:${GIT_PUSH_TOKEN}@${CI_REPOSITORY_URL#*@}" HEAD:$CI_COMMIT_BRANCH
       echo "Versioning automation complete."
+
+  #SonarQube static code analysis
+  code-analysis:
+    - !reference [.helper, sonar-installer]
+    - |
+      export LC_ALL=C
+      PATH="$HOME/bin:$HOME/sonar/bin:$PATH"
+      echo "Running SonarQube static code analysis..."
+      build-wrapper-linux-x86-64 --out-dir "${BUILD_WRAPPER_OUT_DIR}" make
+      sonar-scanner --define sonar.cfamily.compile-commands="${BUILD_WRAPPER_OUT_DIR}/compile_commands.json"
+      curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=${PROJECT_KEY}&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json
