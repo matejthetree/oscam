@@ -417,6 +417,5 @@
       export LC_ALL=C
       PATH="$HOME/bin:$HOME/sonar/bin:$PATH"
       echo "Running SonarQube static code analysis..."
-      export EXTRA_CC_OPTS="-fprofile-abs-path --coverage -O0"
-      build-wrapper-linux-x86-64 --out-dir "${BUILD_WRAPPER_OUT_DIR}" make
+      build-wrapper-linux-x86-64 --out-dir "${BUILD_WRAPPER_OUT_DIR}" make EXTRA_CC_OPTS=\"-fprofile-abs-path --coverage -O0\" EXTRA_LDFLAGS=\"-lgcov --coverage\"
       #sonar-scanner --define sonar.cfamily.compile-commands="${BUILD_WRAPPER_OUT_DIR}/compile_commands.json"
